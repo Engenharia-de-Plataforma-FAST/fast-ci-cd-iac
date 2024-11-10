@@ -1,0 +1,65 @@
+---
+- name: Remove old packages
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-doc
+      - docker-compose
+      - docker-compose-v2
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+
+- name: Install Dependencies
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - python3-jsondiff
+    state: present
+
+# This is an approch because the package on Ubuntu is using a old version
+- name: Download and Install Package Docker 7.1.0
+  block:
+    - name: Get Docker
+      ansible.builtin.get_url:
+        url: https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz
+        dest: /tmp/docker-7.1.0.tar.gz
+        validate_certs: false
+
+    - name: Install Docker 7.1.0 package
+      ansible.builtin.shell: python3 -m pip install docker-7.1.0.tar.gz --break-system-packages
+
+- name: Add Docker's official GPG key
+  block:
+    - name: Get GPG
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        validate_certs: false
+
+    - name: somerepo | apt source
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+- name: Install Docker CE
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Start Docker Service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Start Docker Swarm
+  community.docker.docker_swarm:
+    state: present

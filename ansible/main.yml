@@ -1,0 +1,17 @@
+---
+- name: Configure Server and Application
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Wait for server to boot
+      ansible.builtin.wait_for_connection:
+        timeout: 120
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Setup server
+      ansible.builtin.include_tasks: "config-server-{{ ansible_distribution | lower }}.yml"
+      when: ansible_facts['system'] == 'Linux'

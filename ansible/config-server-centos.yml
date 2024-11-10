@@ -1,0 +1,64 @@
+---
+- name: install epel-release
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+
+- name: remove old packages
+  ansible.builtin.dnf:
+    name:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-engine
+    state: removed
+
+- name: install dependences by dnf
+  ansible.builtin.dnf:
+    name:
+      - yum-utils
+      - python3-pip
+    state: present
+
+- name: install dependences by pip
+  ansible.builtin.pip:
+    name:
+      - docker==5.0.3
+      - jsondiff==2.0.0
+      - pyyaml==6.0.1
+      - requests==2.27.1
+    state: present
+
+- name: verify repository
+  ansible.builtin.stat:
+    path: /etc/yum.repos.d/docker-ce.repo
+  register: repo_docker
+
+- name: adding docker-ce repository
+  ansible.builtin.shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  when: not repo_docker.stat.exists
+
+- name: install docker-ce
+  ansible.builtin.yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+- name: start docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: start docker swarm
+  community.docker.docker_swarm:
+    state: present
